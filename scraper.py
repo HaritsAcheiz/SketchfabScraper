@@ -1,0 +1,217 @@
+import requests
+from selectolax.parser import HTMLParser
+from dataclasses import dataclass, asdict
+import os
+import json
+import csv
+from lxml import html
+from selenium import webdriver
+from selenium.common import NoSuchElementException, TimeoutException
+from selenium.webdriver import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.support import expected_conditions as ec
+from selenium.webdriver.support.wait import WebDriverWait
+
+@dataclass
+class Item:
+    title: str
+    source_format: str
+    download_size: str
+    geometry: str
+    vertices: str
+    pbr: str
+    texture: str
+    materials: str
+    uv_layers: str
+    vartex_colors: str
+    animations: str
+    rigged_geometries: str
+    morph_geometries: str
+    scale_transformation: str
+
+@dataclass
+class Scraper:
+
+    def fetch(self, url):
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'
+        }
+
+        with requests.Session() as s:
+            r = s.get(url, headers=headers)
+        try:
+            r.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            return "Error: " + str(e)
+        return r
+
+    # def fetch_view(self, url):
+    #     headers = {
+    #         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'
+    #     }
+    #
+    #     with requests.Session() as s:
+    #         r = s.get(url, headers=headers)
+    #         try:
+    #             r.raise_for_status()
+    #             pid = url.split("/")[-1].split("-")[-1]
+    #             s.post(f'https://sketchfab.com/i/models/{pid}/views')
+    #             response = s.get(url)
+    #         except requests.exceptions.HTTPError as e:
+    #             return "Error: " + str(e)
+    #     return response
+
+    def webdriver_setup(self):
+        # ip, port = proxy.split(sep=':')
+
+        useragent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'
+        firefox_options = Options()
+
+        firefox_options.add_argument('-headless')
+        firefox_options.add_argument('--no-sandbox')
+        firefox_options.page_load_strategy = "eager"
+
+        firefox_options.set_preference("general.useragent.override", useragent)
+        # firefox_options.set_preference('network.proxy.type', 1)
+        # firefox_options.set_preference('network.proxy.socks', ip)
+        # firefox_options.set_preference('network.proxy.socks_port', int(port))
+        # firefox_options.set_preference('network.proxy.socks_version', 4)
+        # firefox_options.set_preference('network.proxy.socks_remote_dns', True)
+        # firefox_options.set_preference('network.proxy.http', ip)
+        # firefox_options.set_preference('network.proxy.http_port', int(port))
+        # firefox_options.set_preference('network.proxy.ssl', ip)
+        # firefox_options.set_preference('network.proxy.ssl_port', int(port))
+
+        driver = webdriver.Firefox(options=firefox_options)
+        return driver
+
+    def fetch_view(self, url):
+        driver = self.webdriver_setup()
+        driver.delete_all_cookies()
+        driver.get(url)
+        driver.maximize_window()
+        driver.set_page_load_timeout(20)
+        wait = WebDriverWait(driver, 15)
+        wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR,'a.stat.skfb-link'))).click()
+        items = wait.until(ec.presence_of_all_elements_located((By.CSS_SELECTOR, 'div.c-model-3d-information__row')))
+        datas = []
+        title = driver.title
+        try:
+            datas[0] = items[0].find_element(By.CSS_SELECTOR,'div:nth-of-type(2) > p > span').text
+            print(datas[0])
+            datas[1] = items[1].find_element(By.CSS_SELECTOR, 'div:nth-of-type(2) > p > span').text
+            print(datas[1])
+            datas[2] = items[2].find_element(By.CSS_SELECTOR, 'div:nth-of-type(2) > div').text
+            print(datas[2])
+            datas[3] = items[3].find_element(By.CSS_SELECTOR, 'div:nth-of-type(2) > div').text
+            print(datas[3])
+            datas[4] = items[4].find_element(By.CSS_SELECTOR, 'div:nth-of-type(2)').text
+            print(datas[4])
+            datas[5] = items[5].find_element(By.CSS_SELECTOR, 'div:nth-of-type(2)').text
+            print(datas[5])
+            datas[6] = items[6].find_element(By.CSS_SELECTOR, 'div:nth-of-type(2)').text
+            print(datas[6])
+            datas[7] = items[7].find_element(By.CSS_SELECTOR, 'div:nth-of-type(2)').text
+            print(datas[7])
+            datas[8] = items[8].find_element(By.CSS_SELECTOR, 'div:nth-of-type(2)').text
+            print(datas[8])
+            datas[9] = items[9].find_element(By.CSS_SELECTOR, 'div:nth-of-type(2)').text
+            print(datas[9])
+            datas[10] = items[10].find_element(By.CSS_SELECTOR, 'div:nth-of-type(2)').text
+            print(datas[10])
+            datas[11] = items[11].find_element(By.CSS_SELECTOR, 'div:nth-of-type(2)').text
+            print(datas[11])
+            datas[12] = items[12].find_element(By.CSS_SELECTOR, 'div:nth-of-type(2)').text
+            print(datas[12])
+        except Exception as e:
+            print(e)
+        print(datas)
+        new_item = Item(title = title,
+             source_format = datas[0],
+             download_size = datas[1],
+             geometry = datas[2],
+             vertices = datas[3],
+             pbr = datas[4],
+             texture =  datas[5],
+             materials = datas[6],
+             uv_layers = datas[7],
+             vartex_colors = datas[8],
+             animations = datas[9],
+             rigged_geometries = datas[10],
+             morph_geometries = datas[11],
+             scale_transformation = datas[12])
+        driver.close()
+        return asdict(new_item)
+
+    def get_detail_url(self, r):
+        json_data = r.json()
+        json_formatted_str = json.dumps(json_data, indent=2)
+        # print(json_formatted_str)
+        # print(len(json_data['results']))
+        detail = {'cursor_next':None, 'detail_urls':None}
+        detail['cursor_next'] = json_data['cursors']['next']
+        urls = []
+        for i in range(len(json_data['results'])):
+            urls.append(json_data['results'][i]['viewerUrl'])
+        detail['detail_urls'] = urls
+        return detail
+
+    def get_info(self):
+        pass
+
+    def download_img(self, img_urls, folder_name):
+        for url in img_urls:
+            if not os.path.exists(folder_name):
+                os.mkdir(folder_name)
+            if url != None:
+                with requests.Session() as s:
+                    r = s.get(url)
+                with open(f"{folder_name}/{url.split('/')[-1]}", 'wb') as f:
+                    f.write(r.content)
+            print('Image downloaded successfully!')
+
+    def to_csv(self, datas, filename, headers):
+        try:
+            for data in datas:
+                try:
+                    file_exists = os.path.isfile(filename)
+                    with open(filename, 'a', encoding='utf-8') as f:
+                        writer = csv.DictWriter(f, delimiter=',', lineterminator='\n', fieldnames=headers)
+                        if not file_exists:
+                            writer.writeheader()
+                        if data != None:
+                            writer.writerow(data)
+                        else:
+                            continue
+                except Exception as e:
+                    print(e)
+                    continue
+        except:
+            pass
+
+
+if __name__ == '__main__':
+    base_url = 'https://sketchfab.com/i/search?q=sofa&sort_by=-relevance&type=models'
+    headers = ['title', 'source_format', 'download_size', 'geometry', 'vertices', 'pbr', 'texture' 'materials',
+               'uv_layers', 'vartex_colors', 'animations', 'rigged_geometries', 'morph_geometries', 'scale_transformation']
+    s=Scraper()
+    next_url = base_url
+    # while 1:
+    try:
+        url = next_url
+        r = s.fetch(url)
+        details = s.get_detail_url(r=r)
+        items = []
+        print(details)
+        for detail_url in details['detail_urls'][0:2]:
+            print()
+            items.append(s.fetch_view(detail_url))
+            
+        # result = response.text
+        # print(result)
+        s.to_csv(datas=items, filename='result.csv', headers=headers)
+        next_url = f"{base_url}&cursor={details['cursor_next']}"
+    except Exception as e:
+        print(e)
+        # break
