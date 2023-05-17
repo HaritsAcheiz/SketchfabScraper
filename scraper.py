@@ -29,6 +29,9 @@ class Item:
     rigged_geometries: str
     morph_geometries: str
     scale_transformations: str
+    price: str
+    page_link: str
+    included_3D_formats: str
 
 @dataclass
 class Scraper:
@@ -93,23 +96,40 @@ class Scraper:
         driver.maximize_window()
         driver.set_page_load_timeout(20)
         wait = WebDriverWait(driver, 15)
-        wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR,'a.stat.skfb-link'))).click()
-        items = wait.until(ec.presence_of_all_elements_located((By.CSS_SELECTOR, 'div.c-model-3d-information__row')))
+        try:
+            wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR,'a.stat.skfb-link'))).click()
+            col_row = 'row'
+        except:
+            print('more info not found')
+            col_row = 'col'
+            pass
+        items = wait.until(ec.presence_of_all_elements_located((By.CSS_SELECTOR, f'div.c-model-3d-information__{col_row}')))
         datas = {'Title': None,
-             'Source format' : None,
-             'Download size' : None,
-             'Geometry' : None,
-             'Vertices' : None,
-             'PBR' : None,
-             'Textures' :  None,
-             'Materials' : None,
-             'UV Layers' : None,
-             'Vertex colors' : None,
-             'Animations' : None,
-             'Rigged geometries' : None,
-             'Morph geometries' : None,
-             'Scale transformations' : None}
+                 'Source format' : None,
+                 'Download size' : None,
+                 'Geometry' : None,
+                 'Vertices' : None,
+                 'PBR' : None,
+                 'Textures' :  None,
+                 'Materials' : None,
+                 'UV Layers' : None,
+                 'Vertex colors' : None,
+                 'Animations' : None,
+                 'Rigged geometries' : None,
+                 'Morph geometries' : None,
+                 'Scale transformations' : None,
+                 'Price': None,
+                 'Page link': None,
+                 'Included 3D formats': None
+                 }
+
         datas['Title'] = driver.title
+        datas['Page link'] = driver.current_url
+        try:
+            datas['Price'] = driver.find_element(By.CSS_SELECTOR,'div.store-informations__header__price').text
+        except:
+            print('Free')
+            datas['Price'] = 'Free'
         for item in items:
             label = item.find_element(By.CSS_SELECTOR,'div.c-model-3d-information__label').text
             if label in ['Source format', 'Download size']:
@@ -129,19 +149,24 @@ class Scraper:
                     datas[label] = None
         print(datas)
         new_item = Item(title = datas['Title'],
-             source_format = datas['Source format'],
-             download_size = datas['Download size'],
-             geometry = datas['Geometry'],
-             vertices = datas['Vertices'],
-             pbr = datas['PBR'],
-             textures =  datas['Textures'],
-             materials = datas['Materials'],
-             uv_layers = datas['UV Layers'],
-             vertex_colors = datas['Vertex colors'],
-             animations = datas['Animations'],
-             rigged_geometries = datas['Rigged geometries'],
-             morph_geometries = datas['Morph geometries'],
-             scale_transformations = datas['Scale transformations'])
+                        source_format = datas['Source format'],
+                        download_size = datas['Download size'],
+                        geometry = datas['Geometry'],
+                        vertices = datas['Vertices'],
+                        pbr = datas['PBR'],
+                        textures =  datas['Textures'],
+                        materials = datas['Materials'],
+                        uv_layers = datas['UV Layers'],
+                        vertex_colors = datas['Vertex colors'],
+                        animations = datas['Animations'],
+                        rigged_geometries = datas['Rigged geometries'],
+                        morph_geometries = datas['Morph geometries'],
+                        scale_transformations = datas['Scale transformations'],
+                        price = datas['Price'],
+                        page_link = datas['Page link'],
+                        included_3D_formats = datas['Included 3D formats']
+        )
+
         driver.close()
         return asdict(new_item)
 
@@ -191,10 +216,11 @@ class Scraper:
 if __name__ == '__main__':
     base_url = 'https://sketchfab.com/i/search?q=sofa&sort_by=-relevance&type=models'
     headers = ['title', 'source_format', 'download_size', 'geometry', 'vertices', 'pbr', 'textures', 'materials',
-               'uv_layers', 'vertex_colors', 'animations', 'rigged_geometries', 'morph_geometries', 'scale_transformations']
+               'uv_layers', 'vertex_colors', 'animations', 'rigged_geometries', 'morph_geometries', 'scale_transformations',
+               'price', 'page_link', 'included_3D_formats']
     s=Scraper()
     next_url = base_url
-    for i in range(2):
+    for i in range(3):
         try:
             url = next_url
             r = s.fetch(url)
